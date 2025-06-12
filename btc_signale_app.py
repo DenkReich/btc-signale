@@ -16,7 +16,7 @@ df = yf.download(symbol, interval="5m", period="1d")
 df.dropna(inplace=True)
 
 # Technische Indikatoren
-df.columns = [col.lower() for col in df.columns]  # Spaltennamen in Kleinbuchstaben
+df.columns = [str(col).lower() for col in df.columns]
 df['rsi'] = ta.momentum.RSIIndicator(close=df['close']).rsi()
 df['ema_fast'] = ta.trend.EMAIndicator(df['Close'], window=9).ema_indicator()
 df['ema_slow'] = ta.trend.EMAIndicator(df['Close'], window=21).ema_indicator()
