@@ -17,6 +17,7 @@ df.dropna(inplace=True)
 
 # Technische Indikatoren
 df.columns = [str(col).lower() for col in df.columns]
+st.write("Spalten:", df.columns.tolist())
 df['rsi'] = ta.momentum.RSIIndicator(close=df['close']).rsi()
 df['ema_fast'] = ta.trend.EMAIndicator(df['Close'], window=9).ema_indicator()
 df['ema_slow'] = ta.trend.EMAIndicator(df['Close'], window=21).ema_indicator()
