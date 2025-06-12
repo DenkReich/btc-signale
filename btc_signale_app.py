@@ -3,48 +3,42 @@ import pandas as pd
 import yfinance as yf
 import ta
 
-st.set_page_config(page_title="btc-signale", layout="centered")
-st.title("📈 Krypto Daytrading Signale (BTC / ETH / SOL)")
+st.set_page_config(page_title="📈 Krypto Daytrading Signale", layout="centered")
+
+st.title("📉 Krypto Daytrading Signale (BTC / ETH / SOL)")
 st.markdown("Live-Signale für **BTC**, **ETH** und **SOL** mit Kauf/Verkauf, SL & TP")
 
-symbols = {
-    "Bitcoin (BTC)": "BTC-USD",
-    "Ethereum (ETH)": "ETH-USD",
-    "Solana (SOL)": "SOL-USD"
-}
-
-selected = st.selectbox("🔍 Wähle ein Asset:", list(symbols.keys()))
-symbol = symbols[selected]
+coin = st.selectbox("🔍 Wähle ein Asset:", ["Bitcoin (BTC)", "Ethereum (ETH)", "Solana (SOL)"])
+symbol = {"Bitcoin (BTC)": "BTC-USD", "Ethereum (ETH)": "ETH-USD", "Solana (SOL)": "SOL-USD"}[coin]
 
 # Daten abrufen
 df = yf.download(symbol, interval="5m", period="1d")
 df.dropna(inplace=True)
 
-# RSI & EMA berechnen
-df["rsi"] = ta.momentum.RSIIndicator(df["Close"]).rsi()
-ema_fast = ta.trend.EMAIndicator(df["Close"], window=9).ema_indicator()
-ema_slow = ta.trend.EMAIndicator(df["Close"], window=21).ema_indicator()
+# Technische Indikatoren
+df['rsi'] = ta.momentum.RSIIndicator(df['Close']).rsi()
+df['ema_fast'] = ta.trend.EMAIndicator(df['Close'], window=9).ema_indicator()
+df['ema_slow'] = ta.trend.EMAIndicator(df['Close'], window=21).ema_indicator()
 
 # Signal-Logik
-last_rsi = df["rsi"].iloc[-1]
-last_price = df["Close"].iloc[-1]
-signal = "⚪️ Neutral"
-sl = tp = None
+def get_signal(row):
+    if row['rsi'] < 30 and row['ema_fast'] > row['ema_slow']:
+        return "📈 Kauf"
+    elif row['rsi'] > 70 and row['ema_fast'] < row['ema_slow']:
+        return "📉 Verkauf"
+    return "⏸️ Neutral"
 
-if last_rsi < 30 and ema_fast.iloc[-1] > ema_slow.iloc[-1]:
-    signal = "🟢 Kauf"
-    sl = round(last_price * 0.98, 2)
-    tp = round(last_price * 1.03, 2)
-elif last_rsi > 70 and ema_fast.iloc[-1] < ema_slow.iloc[-1]:
-    signal = "🔴 Verkauf"
-    sl = round(last_price * 1.02, 2)
-    tp = round(last_price * 0.97, 2)
+df['Signal'] = df.apply(get_signal, axis=1)
 
-# Anzeige
-st.metric("📊 Letzter Preis", f"${last_price:.2f}")
-st.metric("📍 RSI", f"{last_rsi:.2f}")
-st.metric("📣 Signal", signal)
+# SL & TP setzen (vereinfachtes Beispiel)
+df['Stop-Loss'] = df['Close'] * 0.98
+df['Take-Profit'] = df['Close'] * 1.02
 
-if sl and tp:
-    st.write(f"💣 **Stop-Loss**: `${sl}`")
-    st.write(f"🎯 **Take-Profit**: `${tp}`")
+# Nur letztes Signal anzeigen
+latest = df.iloc[-1]
+
+st.subheader(f"Aktuelles Signal für {coin}:")
+st.markdown(f"**{latest['Signal']}** bei Preis **{latest['Close']:.2f} USD**")
+st.write(f"SL: {latest['Stop-Loss']:.2f} USD  |  TP: {latest['Take-Profit']:.2f} USD")
+
+st.line_chart(df[['Close', 'ema_fast', 'ema_slow']].dropna())
